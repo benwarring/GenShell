@@ -1,3 +1,6 @@
+#ifndef WRAPPERS_H
+#define WRAPPERS_H
+
 /**
  * Wrapper header that includes various system commands that are used in GenShell
  */
@@ -55,3 +58,5 @@ ssize_t Recv(int sockfd, void *buf, size_t len, int flags);
 
 // uses unistd.h
 int Execvp(const char *file, char *const argv[]);
+
+#endif // WRAPPERS_H
