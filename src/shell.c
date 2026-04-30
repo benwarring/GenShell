@@ -17,7 +17,8 @@
  */
 int clear_helper() {
     int status;
-    pid_t = Fork();
+    pid_t pid = Fork();
+    
     if (pid == 0) {
         // in the child process
         char *args[] = {"clear", NULL};
@@ -41,8 +42,8 @@ int clear_helper() {
 /**
  * Executes a command entered by the user by forking a child process and using execvp to run the command.
  *
- * @param args The array of command and arguments to execute
- * @return 0 on success, or a non-zero value on failure
+ * @param       args The array of command and arguments to execute
+ * @return      0 on success, or a non-zero value on failure
  */
 int execute(char *args[]) {
     int status;
@@ -56,10 +57,11 @@ int execute(char *args[]) {
         if (WIFEXITED(status)) {
             int code = WEXITSTATUS(status);
             if (code != 0) {
-                fprintf(stderr, "[ishell: program terminated abnormally][%d]\n", code);
+                fprintf(stderr, "[GenShell: program terminated abnormally][%d]\n", code);
+            }
         } else if (WIFSIGNALED(status)) {
             // Killed by a signal — treat as abnormal, report the signal number
-            fprintf(stderr, "[ishell: program terminated abnormally][%d]\n", WTERMSIG(status));
+            fprintf(stderr, "[GenShell: program terminated abnormally][%d]\n", WTERMSIG(status));
         }
     }
     
@@ -67,12 +69,44 @@ int execute(char *args[]) {
 }
 
 
+/**
+ * Helper function that prints the GenShell at the top of the terminal screen
+ */
+void print_genshell() {
+    FILE *fp = fopen("genshell.txt", "r");
+    if (!fp) {
+        perror("fopen");
+        exit(EXIT_FAILURE);
+    }
+
+    char line[512];
+    while (fgets(line, sizeof(line), fp)) {
+        fputs(line, stdout);
+        fflush(stdout);          // force the line out NOW
+        usleep(50000);           // 50ms delay
+    }
+
+    fclose(fp);
+}
 
 
 
 int main(int argc, char *argv[]) {
     
- 
+    if (argc != 1) {
+        fprintf(stderr, "Usage: %s\n", argv[0]);
+    }
+    
+    int consecutive_enters = 0;     // counter for consecutive empty inputs
+    char input[1024];
+    int run = 1;                    // condition to continue running the shell
+    
+    // clears the terminal screen
+    clear_helper();
+    
+    // prints GenShell in clean window
+    print_genshell();
+    
  
     return 0;   
 }
