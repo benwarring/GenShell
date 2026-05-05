@@ -3,42 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 #include <sys/wait.h>
 
+#include "shell_utils.h"
 #include "wrappers.h"
 
 #define MAX_ARGS 100
-
-
-/* HELPER FUNCTIONS */
-
-/**
- * Clears the terminal screen by forking a child process and executing the clear command
- * 
- * @return      0 on success, -1 on failure
- */
-int clear_helper() {
-    int status;
-    pid_t pid = Fork();
-    
-    if (pid == 0) {
-        // in the child process
-        char *args[] = {"clear", NULL};
-        Execvp(args[0], NULL);
-    } else {
-        // parent process
-        Waitpid(pid, &status, 0);
-        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-            fprintf(stderr, "Clear command exited with status %d\n", WEXITSTATUS(status));
-            return -1;
-        } else if (WIFSIGNALED(status)) {
-            fprintf(stderr, "Clear command was terminated by signal %d\n", WTERMSIG(status));
-            return -1;
-        }
-    }
-    
-    return 0;
-}
 
 
 /**
@@ -68,49 +39,6 @@ int execute(char *args[]) {
     }
     
     return 0;
-}
-
-
-/**
- * Helper function that prints the GenShell at the top of the terminal screen.
- * The first time this prints it will have a slight delay between printing lines.
- * A separate function exists to print it all other times
- */
-void print_first_genshell() {
-    FILE *fp = fopen("genshell.txt", "r");
-    if (!fp) {
-        perror("fopen");
-        exit(EXIT_FAILURE);
-    }
-
-    char line[512];
-    while (fgets(line, sizeof(line), fp)) {
-        fputs(line, stdout);
-        fflush(stdout);          // force the line out NOW
-        usleep(50000);           // 50ms delay
-    }
-
-    fclose(fp);
-}
-
-
-/**
- * Helper function to print the GenShell at the top of the termina screen. 
- */
-void print_genshell() {
-    FILE *fp = fopen("genshell.txt", "r");
-    if (!fp) {
-        perror("fopen");
-        exit(EXIT_FAILURE);
-    }
-
-    char line[512];
-    while (fgets(line, sizeof(line), fp)) {
-        fputs(line, stdout);
-        fflush(stdout);          // force the line out NOW
-    }
-
-    fclose(fp);
 }
 
 
@@ -167,36 +95,25 @@ int tokenize_arguments(char *input, char *args[], size_t max_args) {
 
 /**
  * Function to run the loop inside of the main method
- * TODO: implement this
+ * 
+ * @param args          the argument vector containing the user command
  */
-int shell_loop() {
-    return 0;
-}
-
-
-
-int main(int argc, char *argv[]) {
-    
-    if (argc != 1) {
-        fprintf(stderr, "Usage: %s\n", argv[0]);
-    }
-    
-    int consecutive_enters = 0;     // counter for consecutive empty inputs
+void shell_loop(void) {
     char input[1024];               // command line input
+    char *args[MAX_ARGS];           // Array to hold command and arguments
+    char cwd[PATH_MAX];             // Array to hold the output of 'pwd'
+    int consecutive_enters = 0;     // counter for consecutive empty inputs
     int run = 1;                    // condition to continue running the shell
-    
-    char *args[MAX_ARGS];                // Array to hold command and arguments
-    
-    // clears the terminal screen
-    clear_helper();
-    
-    // prints GenShell in clean window
-    print_first_genshell();
-    
+
     while(run) {
-        printf("GenShell> $ ");
+        // get the current working directory
+        if (getcwd(cwd, sizeof(cwd))) {
+            printf("[%s] ", cwd);
+        }
+
+        printf("GenShell> $ ");      // prompt for input
         if (fgets(input, sizeof(input), stdin) == NULL) {
-            break;          // EOF or error
+            break;                   // EOF or error
         }
         
         // remove trailing newline
@@ -239,10 +156,28 @@ int main(int argc, char *argv[]) {
         if (n > 0) {
             execute(args);          // execute the command with provided arguments
         }
-        
-        
+    }
+}
+
+
+
+int main(int argc, char *argv[]) {
+    
+    // ensure only one CLA (./ishell)
+    if (argc != 1) {
+        fprintf(stderr, "Usage: %s\n", argv[0]);
     }
     
+    // clears the terminal screen
+    clear_helper();
+    
+    // prints GenShell in clean window
+    print_first_genshell();
+    
+    // run the loop
+    shell_loop();
+    
+    // clear the terminal on exit
     clear_helper();
     return 0;   
 }
